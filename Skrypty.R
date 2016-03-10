@@ -5,24 +5,35 @@ rm(list=ls(all=TRUE))
 ###### Funkcje pomocnicze:
 ## Podstawowa funkcja pomocnicza:
 
-obliczPoprawke <- function(timeVec,T0, RH0, Nmeas)
+obliczPoprawke <- function(mojeDane)
 {
   # Funkcja oblicza poprawkę ze względu na wilgotność gleby dla danych COSMOS
   # zgodnie z http://cosmos.hwr.arizona.edu/Docs/rosolem13-effect-of-water-vapor.pdf
   # (APPENDIX - Computation of Absolute Humidity)
+  
+  timeVec <- mojeDane[,"TIME"]
+  T0 <- mojeDane[,"TEM"]
+  RH0 <- mojeDane[,"RH"]
+  Nmeas <- mojeDane[,"CORR"]
+  orgSM <- mojeDane[,"SOILM"]
+  
   T0 <- as.double(T0)
   RH0 <- as.double(RH0)
   es0 <- paraWstanieNasycenia(T0)
   e0 <- cisnienieParyWodnej(RH0, es0)
   qv0 <- wilgotnoscBezwzgledna(e0,T0)
   qv0REF <- qv0REFDerlo(timeVec, qv0)
+  print(paste("qv0REF =", qv0REF))
   #Wartość korekty Cwv powinna być rzedu 1+/-2% (czyli miedzy 0.98 a 1.02.)
+  CWV_przedPopr <- wspSkalujacy(qv0,qv0REF)
   CWV <- wspSkalujacy(qv0,qv0REF)
+  CWV[is.infinite(CWV)] <- 1
   NCORR <- poprawN(Nmeas, CWV)
   
   # na podstawie: http://cosmos.hwr.arizona.edu/Probes/StationDat/084/calib.php
   # Zakładam, że phi 0 = Mean Count Rate between 2013-04-16 09:00 and 2013-04-16 15:00 UTC 
   phi0 = 1798
+  print(paste("phi0 =", phi0))
   
   # Wzór 4 na stronie 4084 jest dla wody w glebie mierzonej w jednostkach g wody na g suchej gleby (czyli ang. gravimetric water content). 
   # Zawartosc wody w jednostkach objetosciowych (objetosc wody dzielona przez objetosc gleby) jest uzyskana przez pomnozenie gravimetric water content przez gestosc suchej gleby (dry bulk density), ktora dla Derla wynosi 1.45 g/cm3 (http://cosmos.hwr.arizona.edu/Probes/StationDat/084/calib.php).
@@ -32,7 +43,19 @@ obliczPoprawke <- function(timeVec,T0, RH0, Nmeas)
   SMbezPopr <- wodaWglebie(Nmeas, phi0)
   
   #można porównać z mojeDane[,"SOILM"]
+  
+  dane <- cbind.data.frame(
+    timeVec, T0, RH0, Nmeas, es0, e0, qv0, CWV_przedPopr, CWV, NCORR, SM, SMbezPopr, orgSM
+  )
  
+  colnames(dane) <- c(
+    "TIME", "T0 - temperatura powietrza w stopniach C","RH0 - wilgotność względna powietrza",
+    "CORR (Level2)", "es0 - ciśnienie pary wodnej w stanie nasycenia (hPa)", "e0", "qv0 - wilgotność bezwględna powietrza",
+    "CWV", "CWV (Inf zastąpione 1)", "NCORR = CORR * CWV", "obliczone SM (wzór 4, strona 4084)", "SM (wzór 4) bez uwzględniania poprawki", "SOILM (Level2)"
+    )
+  
+  return(dane)
+  
 }
 
 ## Inne funkcje pomocnicze:
@@ -99,7 +122,7 @@ paraWstanieNasycenia <- function(T0)
 cisnienieParyWodnej <- function(RH0, es0)
 {
   # Funkcja zwraca e0 - właściwe ciśnienie pary wodnej
-  # Parametry wejściowe: RH0 - wilogtność względna, es0 - ciśnienie pary wodnej w stanie nasycenia
+  # Parametry wejściowe: RH0 - wilgotność względna powietrza, es0 - ciśnienie pary wodnej w stanie nasycenia
   e0 = RH0 * es0
   
   sprawdz(e0,"e0")
@@ -148,11 +171,11 @@ wspSkalujacy <- function(qv0, qv0REF)
   delta = as.double(qv0) - as.double(qv0REF)
   CWV = 1 + 0.0054 * delta
   
-  if ( any(is.infinite(CWV)) )
-  {
-    message("W danych były wartości CWV równe Inf. Zostaną zamienione na 1.")
-    CWV[is.infinite(CWV)] <- 1
-  }
+#   if ( any(is.infinite(CWV)) )
+#   {
+#     message("W danych były wartości CWV równe Inf. Zostaną zamienione na 1.")
+#     CWV[is.infinite(CWV)] <- 1
+#   }
   
   sprawdz(CWV,"CWV - single scaling factor ")
   
@@ -188,7 +211,35 @@ wodaWglebie <- function(phi, phi0)
 ## Czytanie danych i wywołanie funkcji:
 sciezka_do_pliku <- file.path(getwd(), "COSMOS_084.mat")
 mojeDane <- zwrocDaneDoObliczen(sciezka_do_pliku)
-timeVec <- mojeDane[,"TIME"]
-T0 <- mojeDane[,"TEM"]
-RH0 <- mojeDane[,"RH"]
-Nmeas <- mojeDane[,"CORR"]
+obliczone <- obliczPoprawke(mojeDane)
+
+# Eksport do Excela
+pacman::p_load(xlsx)
+write.xlsx(
+  x = obliczone, file = "Obliczenia na podstawie danych w pliku COSMOS_084.mat.xls", 
+  sheetName = "Na podstawie COSMOS_084.mat", row.names = FALSE
+           )
+
+
+#Histogram
+dt <- obliczone[,"obliczone SM (wzór 4, strona 4084)"]
+hist(dt, main="obliczone SM", col="blue",
+     xlab = paste(
+       "Obliczone SM, min:", round(min(dt),3), "maks: ", round(max(dt),3), "średnia: ", round(mean(dt),3)
+       )
+     )
+
+dt <- obliczone[,"SM (wzór 4) bez uwzględniania poprawki"]
+hist(dt, main="SM bez uwzględniania poprawki", col="blue",
+     xlab = paste(
+       "SM bez popr, min:", round(min(dt),3), "maks: ", round(max(dt),3), "średnia: ", round(mean(dt),3)
+     )
+)
+
+
+dt <- obliczone[,"CWV (Inf zastąpione 1)"]
+hist(dt, main="CWV (Inf zastąpione 1)", col="blue",
+     xlab = paste(
+       "CWV, min:", round(min(dt),3), "maks: ", round(max(dt),3), "średnia: ", round(mean(dt),3)
+     )
+)
