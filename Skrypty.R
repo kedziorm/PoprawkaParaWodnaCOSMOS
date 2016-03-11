@@ -31,8 +31,9 @@ obliczPoprawke <- function(mojeDane)
   NCORR <- poprawN(Nmeas, CWV)
   
   # na podstawie: http://cosmos.hwr.arizona.edu/Probes/StationDat/084/calib.php
-  # Zakładam, że phi 0 = Mean Count Rate between 2013-04-16 09:00 and 2013-04-16 15:00 UTC 
-  phi0 = 1798
+  # phi_0 =	3145	cph	From COSMOS web page for Derlo
+  # phi0	3145	cph	Computed using calibration function, no lattice water - the same as COSMOS web page (and above)
+  phi0 = 3145
   print(paste("phi0 =", phi0))
   
   # Wzór 4 na stronie 4084 jest dla wody w glebie mierzonej w jednostkach g wody na g suchej gleby (czyli ang. gravimetric water content). 
@@ -194,9 +195,9 @@ wodaWglebie <- function(phi, phi0)
   # Funkcja zwraca wilgotność gleby (wzór 4, strona 4084 w M. Zreda et al.: COSMOS: the COsmic-ray Soil Moisture Observing System)
   # Parametry wejściowe: phi0 - "the neutron intensity in air above dry soil (obtained  by calibration, see Sect. 2.5)"
   # Ustawienie stałych parametrów:
-  a0 = 0.0808
-  a1 = 0.372
-  a2 = 0.115
+  a0 = 0.0808 # a0	0.0808	g/g	Calibration constant (from Zreda et al., 2012 and Desilets et al., 2010)
+  a1 = 0.372 # a1	0.372	-	Calibration constant (from Zreda et al., 2012 and Desilets et al., 2010)
+  a2 = 0.115 # a2	0.115	g/g	Calibration constant (from Zreda et al., 2012 and Desilets et al., 2010)
   phi <- as.double(phi)
   phi0 <- as.double(phi0)
   
