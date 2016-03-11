@@ -35,10 +35,14 @@ obliczPoprawke <- function(mojeDane)
   # phi0	3145	cph	Computed using calibration function, no lattice water - the same as COSMOS web page (and above)
   phi0 = 3145
   print(paste("phi0 =", phi0))
+  # Computed using calibration function, with lattice water (LW) and bulk density (rho_b)
+  phi0_LW_bd = 3007.73
+  
   
   # Wzór 4 na stronie 4084 jest dla wody w glebie mierzonej w jednostkach g wody na g suchej gleby (czyli ang. gravimetric water content). 
   # Zawartosc wody w jednostkach objetosciowych (objetosc wody dzielona przez objetosc gleby) jest uzyskana przez pomnozenie gravimetric water content przez gestosc suchej gleby (dry bulk density), ktora dla Derla wynosi 1.45 g/cm3 (http://cosmos.hwr.arizona.edu/Probes/StationDat/084/calib.php).
   SM <- wodaWglebie(NCORR, phi0)
+  SMphi0_LW <- wodaWglebie(NCORR, phi0_LW_bd)
   
   #czyli dane bez poprawki:
   SMbezPopr <- wodaWglebie(Nmeas, phi0)
@@ -46,13 +50,14 @@ obliczPoprawke <- function(mojeDane)
   #można porównać z mojeDane[,"SOILM"]
   
   dane <- cbind.data.frame(
-    timeVec, T0, RH0, Nmeas, es0, e0, qv0, CWV_przedPopr, CWV, NCORR, SM, SMbezPopr, orgSM
+    timeVec, T0, RH0, Nmeas, es0, e0, qv0, CWV_przedPopr, CWV, NCORR, SM, SMphi0_LW, SMbezPopr, orgSM
   )
  
   colnames(dane) <- c(
     "TIME", "T0 - temperatura powietrza w stopniach C","RH0 - wilgotność względna powietrza",
     "CORR (Level2)", "es0 - ciśnienie pary wodnej w stanie nasycenia (hPa)", "e0", "qv0 - wilgotność bezwględna powietrza",
-    "CWV", "CWV (Inf zastąpione 1)", "NCORR = CORR * CWV", "obliczone SM (wzór 4, strona 4084)", "SM (wzór 4) bez uwzględniania poprawki", "SOILM (Level2)"
+    "CWV", "CWV (Inf zastąpione 1)", "NCORR = CORR * CWV", 
+    paste("SM dla phi0 =", phi0), paste("SM dla phi0 =", phi0_LW_bd), "SM (wzór 4) bez uwzględniania poprawki", "SOILM (Level2)"
     )
   
   return(dane)
@@ -87,20 +92,44 @@ zwrocDaneDoObliczen <- function(sciezka_do_pliku)
   Level2 <- dane$Level2 # rownames(Level2): "INTEN" "SCALE" "CORR"  "SANPE" "TIME"  "PRESS" "ERR"   "PROBE" "OTHER" "MOD"
   Level3 <- dane$Level3 # rownames(Level3): "DEP"   "SM12H" "SOILM" "D12"   "TIME" 
   
-  doObliczen <- suppressWarnings(cbind(
+  Level1_dane <- cbind.data.frame(
     format(as.POSIXct(
       unlist(Level1[4])*86400 - 86400,tz = "UTC", origin="0000-01-01"),"%Y-%m-%d %H:%M"
     ), # "TIME" dates are stored as days since Jan-1-0000.
     # zgodnie z http://cosmos.hwr.arizona.edu/Probes/StationDat/084/counts.txt
     # zakres daty powinny zaczynać się 2013-04-15 15:51 (UTC) i kończyć 2016-02-21 07:12 (UTC),
     # więc odejmuję jeden dzień (86400)
-    as.double(unlist(Level1[1])), # "TEM"
-    as.double(unlist(Level1[6])), # "RH"
-    as.double(unlist(Level2[3])), # "Nmeas (zmierzona intensywnosc neutronow), ktora jest w danych Level 2, jako CORR"
-    as.double(unlist(Level3[3])) # "SOILM" - do porównania z obliczoną w tym skrypcie SM
-  ))
+  as.double(unlist(Level1[1])), # "TEM"
+  as.double(unlist(Level1[6])) # "RH"
+  )
+
+  colnames(Level1_dane) <- c("TIME", "TEM", "RH")
   
-  colnames(doObliczen) <- c("TIME", "TEM", "RH", "CORR", "SOILM")
+  Level2_dane <- cbind.data.frame(
+    format(as.POSIXct(
+      unlist(Level2[5])*86400 - 86400,tz = "UTC", origin="0000-01-01"),"%Y-%m-%d %H:%M"
+    ), # "TIME"
+    as.double(unlist(Level2[3])) # "Nmeas (zmierzona intensywnosc neutronow), ktora jest w danych Level 2, jako CORR"
+  )
+  
+  colnames(Level2_dane) <- c("TIME", "CORR")
+  
+  
+  Level3_dane <- cbind.data.frame(
+    format(as.POSIXct(
+      unlist(Level3[5])*86400 - 86400,tz = "UTC", origin="0000-01-01"),"%Y-%m-%d %H:%M"
+    ), # "TIME"
+    as.double(unlist(Level3[3])) # "SOILM" - do porównania z obliczoną w tym skrypcie SM
+  )
+  
+  colnames(Level3_dane) <- c("TIME", "SOILM")
+  
+  doObliczen <- merge(Level1_dane,Level2_dane, all.x = TRUE, all.y = TRUE, by="TIME")
+  doObliczen <- merge(doObliczen, Level3_dane, all.x = TRUE, all.y = TRUE, by="TIME")
+  
+  # colnames(doObliczen) <- c("TIME", "TEM", "RH", "CORR", "SOILM")
+  
+  doObliczen$TIME <- as.POSIXct(doObliczen$TIME, tz="UTC", format="%Y-%m-%d %H:%M")
   
   return(doObliczen)
   
