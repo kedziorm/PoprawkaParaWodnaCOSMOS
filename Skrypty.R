@@ -11,6 +11,22 @@ obliczPoprawke <- function(mojeDane)
   # zgodnie z http://cosmos.hwr.arizona.edu/Docs/rosolem13-effect-of-water-vapor.pdf
   # (APPENDIX - Computation of Absolute Humidity)
   
+  ####################PARAMETRY####################################################
+  # na podstawie: http://cosmos.hwr.arizona.edu/Probes/StationDat/084/calib.php
+  # phi_0 =	3145	cph	From COSMOS web page for Derlo
+  # phi0	3145	cph	Computed using calibration function, no lattice water - the same as COSMOS web page (and above)
+  phi0 = 3145
+  print(paste("phi0 =", phi0))
+  # Computed using calibration function, with lattice water (LW) and bulk density (rho_b)
+  phi0_LW_bd = 3007.73
+  
+  # LW	0.043	g/g	Measured on field calibration samples
+  LW = 0.043
+  
+  # rho_b	1.45	g/cm3	Measured on field calibration samples
+  rho_b = 1.45
+  ##############################################################################
+  
   timeVec <- mojeDane[,"TIME"]
   T0 <- mojeDane[,"TEM"]
   RH0 <- mojeDane[,"RH"]
@@ -30,19 +46,11 @@ obliczPoprawke <- function(mojeDane)
   CWV[is.infinite(CWV)] <- 1
   NCORR <- poprawN(Nmeas, CWV)
   
-  # na podstawie: http://cosmos.hwr.arizona.edu/Probes/StationDat/084/calib.php
-  # phi_0 =	3145	cph	From COSMOS web page for Derlo
-  # phi0	3145	cph	Computed using calibration function, no lattice water - the same as COSMOS web page (and above)
-  phi0 = 3145
-  print(paste("phi0 =", phi0))
-  # Computed using calibration function, with lattice water (LW) and bulk density (rho_b)
-  phi0_LW_bd = 3007.73
-  
-  
   # Wzór 4 na stronie 4084 jest dla wody w glebie mierzonej w jednostkach g wody na g suchej gleby (czyli ang. gravimetric water content). 
   # Zawartosc wody w jednostkach objetosciowych (objetosc wody dzielona przez objetosc gleby) jest uzyskana przez pomnozenie gravimetric water content przez gestosc suchej gleby (dry bulk density), ktora dla Derla wynosi 1.45 g/cm3 (http://cosmos.hwr.arizona.edu/Probes/StationDat/084/calib.php).
   SM <- wodaWglebie(NCORR, phi0)
   SMphi0_LW <- wodaWglebie(NCORR, phi0_LW_bd)
+  SM_ost <- (SMphi0_LW - LW) * rho_b
   
   #czyli dane bez poprawki:
   SMbezPopr <- wodaWglebie(Nmeas, phi0)
@@ -50,14 +58,14 @@ obliczPoprawke <- function(mojeDane)
   #można porównać z mojeDane[,"SOILM"]
   
   dane <- cbind.data.frame(
-    timeVec, T0, RH0, Nmeas, es0, e0, qv0, CWV_przedPopr, CWV, NCORR, SM, SMphi0_LW, SMbezPopr, orgSM
+    timeVec, T0, RH0, Nmeas, es0, e0, qv0, CWV_przedPopr, CWV, NCORR, SM, SMphi0_LW, SM_ost, SMbezPopr, orgSM
   )
  
   colnames(dane) <- c(
     "TIME", "T0 - temperatura powietrza w stopniach C","RH0 - wilgotność względna powietrza",
     "CORR (Level2)", "es0 - ciśnienie pary wodnej w stanie nasycenia (hPa)", "e0", "qv0 - wilgotność bezwględna powietrza",
     "CWV", "CWV (Inf zastąpione 1)", "NCORR = CORR * CWV", 
-    paste("SM dla phi0 =", phi0), paste("SM dla phi0 =", phi0_LW_bd), "SM (wzór 4) bez uwzględniania poprawki", "SOILM (Level2)"
+    paste("SM dla phi0 =", phi0), paste("SM dla phi0 =", phi0_LW_bd), "(SM - LW) * rho_b", "SM (wzór 4) bez uwzględniania poprawki", "SOILM (Level2)"
     )
   
   return(dane)
@@ -252,17 +260,17 @@ write.xlsx(
 
 
 #Histogram
-dt <- obliczone[,"obliczone SM (wzór 4, strona 4084)"]
+dt <- obliczone[,"(SM - LW) * rho_b"]
 hist(dt, main="obliczone SM", col="blue",
      xlab = paste(
-       "Obliczone SM, min:", round(min(dt),3), "maks: ", round(max(dt),3), "średnia: ", round(mean(dt),3)
+       "Obliczone SM, min:", round(min(dt, na.rm=TRUE),3), "maks: ", round(max(dt,na.rm=TRUE),3), "średnia: ", round(mean(dt,na.rm = TRUE),3)
        )
      )
 
 dt <- obliczone[,"SM (wzór 4) bez uwzględniania poprawki"]
 hist(dt, main="SM bez uwzględniania poprawki", col="blue",
      xlab = paste(
-       "SM bez popr, min:", round(min(dt),3), "maks: ", round(max(dt),3), "średnia: ", round(mean(dt),3)
+       "SM bez popr, min:", round(min(dt, na.rm = TRUE),3), "maks: ", round(max(dt, na.rm = TRUE),3), "średnia: ", round(mean(dt, na.rm = TRUE),3)
      )
 )
 
@@ -270,6 +278,6 @@ hist(dt, main="SM bez uwzględniania poprawki", col="blue",
 dt <- obliczone[,"CWV (Inf zastąpione 1)"]
 hist(dt, main="CWV (Inf zastąpione 1)", col="blue",
      xlab = paste(
-       "CWV, min:", round(min(dt),3), "maks: ", round(max(dt),3), "średnia: ", round(mean(dt),3)
+       "CWV, min:", round(min(dt, na.rm = TRUE),3), "maks: ", round(max(dt, na.rm = TRUE),3), "średnia: ", round(mean(dt, na.rm = TRUE),3)
      )
 )
