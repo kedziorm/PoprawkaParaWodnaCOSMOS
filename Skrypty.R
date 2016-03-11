@@ -112,7 +112,7 @@ paraWstanieNasycenia <- function(T0)
 {
   # Funkcja zwraca es0 - ciśnienie pary wodnej w stanie nasycenia (w hPa)
   # Parametry wejściowe: T0 - temperatura powietrza w stopniach C
-  es0 = 6.112*exp( (17.67 * T0) / (243.5 + T0) )
+  es0 = (6.112*exp( (17.67 * T0) / (243.5 + T0) ))*100
   
   sprawdz(es0,"es0")
   
@@ -124,7 +124,7 @@ cisnienieParyWodnej <- function(RH0, es0)
 {
   # Funkcja zwraca e0 - właściwe ciśnienie pary wodnej
   # Parametry wejściowe: RH0 - wilgotność względna powietrza, es0 - ciśnienie pary wodnej w stanie nasycenia
-  e0 = RH0 * es0
+  e0 = (RH0 * es0)/100
   
   sprawdz(e0,"e0")
   
@@ -137,7 +137,7 @@ wilgotnoscBezwzgledna <- function(e0, T0)
   # Parametry wejściowe: e0 - właściwe ciśnienie pary wodnej, T0 - temperatura powietrza w stopniach C
   
   Rv <- 461.5 # Rv to stała gazowa dla pary wodnej
-  qv0 = e0 / (Rv * T0)
+  qv0 = (e0 / (Rv * (T0 + 273.15) )) * 1000
   
   sprawdz(qv0,"qv0")
   
