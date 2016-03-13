@@ -49,7 +49,7 @@ maxKalib <- "2013-04-16 15:00"
 obliczPoprawke <- function(sciezka_do_pliku_MAT)
 {
   # Funkcja zwraca ramkę danych zawierającą między innymi obliczoną (poprawioną)
-  # wartość wilgotności gleby
+  # wartość wilgotności gleby ("(SM - LW) * rho_b") oraz wartość "SOILM" L3 (bez poprawki - ta sama wartość w danych ISMN)
   
   if(!file.exists(sciezka_do_pliku_MAT))
   {
@@ -96,7 +96,7 @@ obliczPoprawke <- function(sciezka_do_pliku_MAT)
     "TIME", "T0 - temperatura powietrza w stopniach C","RH0 - wilgotność względna powietrza",
     "CORR (Level2)", "es0 - ciśnienie pary wodnej w stanie nasycenia (hPa)", "e0", "qv0 - wilgotność bezwględna powietrza",
     "CWV", "CWV (Inf zastąpione 1)", "NCORR = CORR * CWV", 
-    paste("SM dla phi0 =", phi0), paste("SM dla phi0 =", phi0_LW_bd), "(SM - LW) * rho_b", "SM (wzór 4) bez uwzględniania poprawki", "SOILM (Level2)"
+    paste("SM dla phi0 =", phi0), paste("SM dla phi0 =", phi0_LW_bd), "(SM - LW) * rho_b", "SM (wzór 4) bez uwzględniania poprawki", "SOILM (Level3)"
     )
   
   return(dane)
