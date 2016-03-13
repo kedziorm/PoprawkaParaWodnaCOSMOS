@@ -122,11 +122,17 @@ zwrocDaneDoObliczen <- function(sciezka_do_pliku)
   # Parametry wejściowe: sciezka_do_pliku - ścieżka do pliku Matlaba (.mat)
   
   # Ładowanie pakietu pozwalającego na odczyt plików .mat
+  # Pacman sprawdza, czy pakiet (np. R.matlab) istnieje
+  # Jeśli nie - instaluje go i ładuje
   if (!require("pacman")) install.packages("pacman")
+  library('pacman')
   pacman::p_load(R.matlab)
   
   dane <- readMat(sciezka_do_pliku)
   
+  #################
+  # TODO: Bardzo niechlujne - wczytanie kolumny o konkretnym numerze.
+  # Powinno być raczej wybieranie na podstawie nazwy.
   Level1 <- dane$Level1 # rownames(Level1): "TEM"   "UNMO"  "BATT"  "TIME"  "PRESS" "RH"    "MOD"
   Level2 <- dane$Level2 # rownames(Level2): "INTEN" "SCALE" "CORR"  "SANPE" "TIME"  "PRESS" "ERR"   "PROBE" "OTHER" "MOD"
   Level3 <- dane$Level3 # rownames(Level3): "DEP"   "SM12H" "SOILM" "D12"   "TIME" 
@@ -162,6 +168,7 @@ zwrocDaneDoObliczen <- function(sciezka_do_pliku)
   )
   
   colnames(Level3_dane) <- c("TIME", "SOILM")
+  #################
   
   doObliczen <- merge(Level1_dane,Level2_dane, all.x = TRUE, all.y = TRUE, by="TIME")
   doObliczen <- merge(doObliczen, Level3_dane, all.x = TRUE, all.y = TRUE, by="TIME")
