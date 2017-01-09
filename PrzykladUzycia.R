@@ -5,6 +5,8 @@ rm(list=ls(all=TRUE))
 source(file.path(getwd(), "COSMOSPoprawkaParaWodna.R"))
 
 ## Czytanie danych i wywołanie funkcji:
+## plik "COSMOS_084.mat" pobrany ze strony http://cosmos.hwr.arizona.edu/Probes/StationDat/084/index.php
+## Bezpośredni odnośnik do pliku: http://cosmos.hwr.arizona.edu/Probes/StationDat/084/COSMOS_084.mat
 sciezka_do_pliku_MAT <- file.path(getwd(), "COSMOS_084.mat")
 obliczone <- obliczPoprawke(sciezka_do_pliku_MAT)
 
